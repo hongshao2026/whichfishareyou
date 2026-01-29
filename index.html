@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德州扑克深海生物原型测试</title>
+    <style>
+        :root {
+            --primary-color: #00d2ff;
+            --secondary-color: #3a7bd5;
+            --bg-dark: #06090f;
+            --card-bg: #1a1f2b;
+            --text-color: #e0e6ed;
+            --accent-color: #ff4757;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #06090f 0%, #0a192f 100%);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* 改为 flex-start 方便长内容滚动 */
+            min-height: 100vh;
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+
+        #app {
+            width: 95%;
+            max-width: 700px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @media (max-width: 600px) {
+            #app { padding: 1.2rem; border-radius: 12px; }
+            .header h1 { font-size: 1.5rem; }
+            .question-text { font-size: 1rem !important; }
+            .option-btn { font-size: 0.9rem !important; padding: 0.8rem !important; }
+        }
+
+        .header { text-align: center; margin-bottom: 1.5rem; }
+        .header h1 { color: var(--primary-color); margin-bottom: 0.5rem; font-size: 1.8rem; }
+        
+        .progress-container { width: 100%; height: 6px; background: #2d3436; border-radius: 3px; margin-bottom: 2rem; position: sticky; top: 0; z-index: 10; }
+        #progress-bar { height: 100%; background: linear-gradient(to right, var(--primary-color), var(--secondary-color)); width: 0%; border-radius: 3px; transition: width 0.3s ease; }
+
+        .question-group { animation: fadeIn 0.4s ease; }
+        .question-item { margin-bottom: 2.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2rem; }
+        .question-item:last-child { border-bottom: none; }
+        
+        .question-text { font-size: 1.1rem; line-height: 1.5; margin-bottom: 1.2rem; font-weight: 500; }
+        .question-text .q-num { color: var(--primary-color); margin-right: 8px; font-family: monospace; }
+
+        .options { display: flex; flex-direction: column; gap: 0.8rem; }
+        .option-btn { 
+            background: #252c3a; 
+            border: 2px solid transparent; 
+            padding: 1rem 1.2rem; 
+            border-radius: 10px; 
+            color: white; 
+            cursor: pointer; 
+            text-align: left; 
+            transition: all 0.2s; 
+            font-size: 0.95rem; 
+            position: relative;
+        }
+        
+        .option-btn:hover { background: #2d384a; }
+        .option-btn.selected { 
+            border-color: var(--primary-color); 
+            background: rgba(0, 210, 255, 0.1); 
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+        }
+        .option-btn.selected::after {
+            content: "✓";
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .nav-footer { display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; }
+        
+        .btn-main { background: var(--primary-color); color: var(--bg-dark); border: none; padding: 0.8rem 2rem; font-size: 1rem; font-weight: bold; border-radius: 50px; cursor: pointer; transition: all 0.3s; }
+        .btn-main:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
+        .btn-outline { background: transparent; border: 2px solid #444; color: #aaa; padding: 0.8rem 2rem; border-radius: 50px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .btn-outline:hover:not(:disabled) { border-color: var(--primary-color); color: var(--primary-color); }
+
+        .result-screen { display: none; text-align: center; animation: fadeIn 0.8s ease; }
+        .animal-name { font-size: 2.2rem; font-weight: bold; margin: 0.5rem 0; color: var(--primary-color); text-shadow: 0 0 20px rgba(0,210,255,0.3); }
+        .code-tag { display: inline-block; background: var(--secondary-color); padding: 4px 15px; border-radius: 20px; font-family: monospace; margin-bottom: 1.5rem; font-weight: bold; }
+        .description-box { text-align: left; background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; line-height: 1.8; font-size: 0.95rem; }
+        
+        input[type="text"], input[type="tel"] { background: #0f141e; border: 2px solid #2d3436; padding: 12px; border-radius: 10px; color: white; font-size: 1.1rem; width: 80%; margin-bottom: 1.5rem; text-align: center; outline: none; }
+        input[type="text"]:focus, input[type="tel"]:focus { border-color: var(--primary-color); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- 欢迎界面 -->
+    <div id="intro" style="text-align: center;">
+        <div class="header">
+            <h1>扑克深海生物原型测试</h1>
+            <p>探索你在牌桌生态位中的真实面目</p>
+        </div>
+        <p style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 1.5rem;">共 30 题</p>
+        <input type="text" id="username" placeholder="输入你的名字" maxlength="12">
+        <input type="tel" id="phone" placeholder="输入你的手机号" maxlength="11">
+        <br>
+        <button id="start-btn" class="btn-main" style="width: 200px; padding: 1rem;">开启深海之旅</button>
+    </div>
+
+    <!-- 答题界面 -->
+    <div id="quiz" style="display:none;">
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div class="header" style="margin-bottom: 1rem;">
+            <span id="page-indicator" style="font-size: 0.85rem; opacity: 0.5;">第 1 / 6 页</span>
+        </div>
+        <div id="question-container"></div>
+        
+        <div class="nav-footer">
+            <button id="prev-btn" class="btn-outline">上一页</button>
+            <button id="next-btn" class="btn-main">下一页</button>
+        </div>
+    </div>
+
+    <!-- 结果界面 -->
+    <div id="result" class="result-screen">
+        <p style="margin-bottom: 0;">你的扑克原型是</p>
+        <div id="result-animal" class="animal-name">---</div>
+        <div id="result-code" class="code-tag">CODE</div>
+        <div id="result-desc" class="description-box"></div>
+        
+        <button id="submit-btn" class="btn-main" style="width: 100%; margin-bottom: 1rem;">保存并查看数据统计</button>
+        <button class="btn-outline" style="width: 100%;" onclick="location.reload()">重新测试</button>
+    </div>
+</div>
+
+<script>
+    const FEISHU_BASE_URL = "https://xcnpow7sc3ja.feishu.cn/share/base/form/shrcnnBC8oSlV7DKo4wl02VTUVd";
+
+    const questions = [
+        { text: "河牌圈，你拿着顶对顶踢脚，牌面略微潮湿但没成花。底池已经很大，对手过牌。你会：", options: { A: "下注 1/3 到 1/2 底池。为了拿价值，我不怕被Check-Raise", B: "随后过牌 (Check Back)。摊牌赢下底池很稳，不想遭遇意外" }, dim: "VO" },
+        { text: "你在河牌拿到了坚果（Nuts），对手是一个偶尔会抓诈唬的玩家。你会：", options: { A: "超池下注 (Overbet) 甚至全压，试图让他看起来像在抓诈唬", B: "下一个标准的 66% 注码，确保他一定会跟注，把钱稳稳拿到手" }, dim: "VO" },
+        { text: "转牌圈你持有中等牌力的听牌（如卡顺加后门花），对手过牌。你会：", options: { A: "延迟下注 (Delay C-bet) 并加点注码，既能打盖弱牌，又能建立底池造价", B: "随后过牌，免费看河牌，控制底池大小" }, dim: "VO" },
+        { text: "面对一个较弱的对手，你的诈唬频率如何？", options: { A: "非常高。只要感知到他范围封顶，我会用很宽的范围去剥削他。", B: "相对适中。我只在有阻断牌或后门胜率较好的时候诈唬，不随意送钱。" }, dim: "VO" },
+        { text: "你对“薄价值 (Thin Value)”的态度是？", options: { A: "必须拿满。如果在河牌过牌后发现对手是第三对子，我会后悔没下注。", B: "见好就收。如果下注被更差的牌跟注当然好，但被加注会让我陷入灾难" }, dim: "VO" },
+        { text: "在多路底池 (Multi-way Pot) 中击中两对，前面有人下注，你会", options: { A: "加注 (Raise)。隔离对手，我需要尽快把筹码打进去", B: "跟注 (Call)。保留对手的诈唬范围和更差的成牌，同时也为了底池控制" }, dim: "VO" },
+        { text: "当你的听牌在河牌没中，你只有A高张，但对手示弱。你会", options: { A: "经常把A高转成诈唬，试图打走对手的小对子或者底对", B: "摊牌比大小，我觉得我的A高有不错的摊牌价值，没必要投入更多的筹码" }, dim: "VO" },
+        { text: "河牌圈对手全压，你拿着抓诈唬的边缘牌（Bluff Catcher）。你的第一反应是", options: { A: "“他的故事讲不通，我要抓他。”", B: "“既然他敢全压，大概率是有牌的。”" }, dim: "DR" },
+        { text: "在翻前，面对紧手玩家的 3-Bet，你持有同花连张 (如 89s)。你会", options: { A: "跟注。我有位置和深筹码，不能轻易放弃权益，我要在翻后操作他", B: "弃牌。我的手牌对抗对方的强范围，跟注是负EV的" }, dim: "DR" },
+        { text: "对手在干燥面连续开了三枪 (Triple Barrel)，你持有中对。你会", options: { A: "痛苦地跟注到底。我不相信他总是有坚果，我不能被剥削", B: "相信他。很少有人会在干燥面用空气打三枪，我尊重他的第三枪" }, dim: "DR" },
+        { text: "遭遇过牌-加注 (Check-Raise) 时，你的心态是？", options: { A: "激起斗志。“你想赶我走？没门。”", B: "警铃大作。“这通常代表两对以上，我要小心。”" }, dim: "DR" },
+        { text: "你如何看待“最小防守频率 (MDF)”？", options: { A: "我会尽力守住我的 MDF，甚至因为知道对手爱诈唬而防守得更宽。", B: "理论是理论，实战中人们诈唬远不够多，MDF对我来说是一个很少用的概念" }, dim: "DR" },
+        { text: "当对手做了一个看起来很像诈唬的小额下注，你手里只有K高张，你会", options: { A: "英雄跟注 (Hero Call) 或者加注把它打走", B: "弃牌。为了这点底池去拿K high冒险不值得。" }, dim: "DR" },
+        { text: "你抓错诈唬后的心情？", options: { A: "不服气，下一把他再打我还跟", B: "承认对手打得好，或者觉得自己刚才不该跟" }, dim: "CE" },
+        { text: "关于翻牌前的起手牌范围表 (Preflop Charts)", options: { A: "我严格背诵并执行，不同位置的开牌频率精确到百分比", B: "我大概知道，但会根据后面玩家是谁来随时调整，有时会玩得很野" }, dim: "CE" },
+        { text: "在决定是否跟注一个河牌下注时，你主要思考", options: { A: "我的手牌在范围中的位置，以及阻断牌 (Blockers) 效应", B: "对手下注时的动作、之前的河牌下注节奏以及他是不是和我有过节" }, dim: "CE" },
+        { text: "遇到一个从未见过的复杂牌面局面，你会", options: { A: "回归博弈论基础，思考如果是 solver 会怎么处理，找一个更贴合solver的决定", B: "依靠“牌感”和过去的经验类比，做出自己当下最舒服的决定" }, dim: "CE" },
+        { text: "你如何复盘学习？", options: { A: "不停的跑 Solver (求解器)，看 EV 树，找频率漏洞", B: "和不同的朋友讨论手牌，看各种高额桌视频，分析学习。" }, dim: "CE" },
+        { text: "对于下注尺度 (Sizing)，你更倾向于：", options: { A: "总使用几何尺度或常用尺度 (如 75%, 50%)，保持范围平衡。", B: "经常会使用奇怪的尺度 (如 1/10 池或 3倍池)，为了诱导或以此表达特定信息。" }, dim: "CE" },
+        { text: "你认为“现场马脚 (Live Tells)”重要吗？", options: { A: "并不重要，甚至有时候起反效果", B: "相当重要，我经常依赖它做判断" }, dim: "CE" },
+        { text: "如果你的直觉和经验告诉你对手在诈唬，但数学赔率和Solver告诉你必须弃牌，你会", options: { A: "弃牌，相信长期数学期望", B: "跟注，相信我的直觉判断" }, dim: "CE" },
+        { text: "你认为扑克的最高境界是", options: { A: "数学上的完美无缺，不可被剥削", B: "读心术般的洞察力，看透对手灵魂" }, dim: "CE" },
+        { text: "遭遇连续的Bad Beat（被小概率反超）后，你的操作会", options: { A: "保持不变，非常理解这是波动的一部分", B: "变得激进或过分保守" }, dim: "PR" },
+        { text: "当你的bankroll剧烈下行时，你会", options: { A: "检查策略是否正确，如果是，继续坚持", B: "怀疑自己，休息不玩" }, dim: "PR" },
+        { text: "在赢了一个超大底池后，接下来的几手牌你会", options: { A: "像什么都没发生一样打", B: "觉得自己很旺 ，开始操作起来" }, dim: "PR" },
+        { text: "你是否会在牌桌上感到心跳加速、手心出汗或极度愤怒？", options: { A: "极少，我像在做外科手术一样冷静", B: "经常，扑克让我的情绪起伏很大" }, dim: "PR" },
+        { text: "关于止损线（Stop Loss），你", options: { A: "严格执行，或者根本不需要", B: "经常打破止损线，相信自己能打回来" }, dim: "PR" },
+        { text: "你认为自己在A-Game（最佳状态）和C-Game（最差状态）时的水平差距", options: { A: "很小，我的表现很稳定", B: "很大，状态好和不好时我判若两人" }, dim: "PR" },
+        { text: "扑克对你日常生活的情绪影响", options: { A: "基本没有影响", B: "输了我会很低落，影响吃饭睡觉。赢了则一天好心情" }, dim: "PR" },
+        { text: "面对对手的无理挑衅或垃圾话，你会", options: { A: "屏蔽或无视，专注于牌局", B: "想要在牌局上“教训”他" }, dim: "PR" }
+    ];
+
+    const profiles = {
+        "VRST": { name: "大白鲨", desc: "<b>[顶级战略家]</b> 你拥有令人惊叹的统治力。在牌桌上，你将深厚的理论基础与坚定的执行力完美结合。你不仅追求价值，更懂得如何通过严密的逻辑防守来保护果实。你的情绪如深海般平静，这让你在任何波动面前都能保持领袖般的从容。<br><br>🌟 <b>优势：</b> 极致的压制力、理论与心态的完美平衡。<br>💡 <b>进化建议：</b> 偶尔展示一丝“人性”的破绽，或许能引诱更多对手入局。" },
+        "VRSV": { name: "锤头鲨", desc: "<b>[充满活力的先锋]</b> 你是牌桌上最活跃的能量源。你拥有敏锐的360度视野（扎实的理论），总是能率先发现价值所在。你的打法充满激情和侵略性，这让对手感到巨大的压力。你的情绪是你强大的燃料，推动你打出极具创造力的操作。<br><br>🌟 <b>优势：</b> 极强的行动力、不知疲倦的价值探索。<br>💡 <b>进化建议：</b> 学会在风暴来临时暂时收起锋芒，让能量输出更加绵长。" },
+        "VRIT": { name: "虎鲸", desc: "<b>[智慧的战术大师]</b> 你不拘泥于死板的公式，而是博弈智慧的化身。你拥有极高的“牌商”，擅长通过阅读对手的心理来制定策略。你的进攻犀利且精准，防守顽强且灵活。你像虎鲸一样懂得团队（底池）协作，总能用最聪明的方式赢得胜利。<br><br>🌟 <b>优势：</b> 卓越的读人能力、灵活应变的战术体系。<br>💡 <b>进化建议：</b> 相信你的直觉，但也别忘了偶尔用数学来校准你的“猎杀本能”。" },
+        "VRIV": { name: "电鳗", desc: "<b>[高压艺术家]</b> 你是牌桌上不可忽视的“X因素”。你拥有独特的直觉天赋，常常打出令人拍案叫绝的神来之笔。你的风格充满了想象力和电流般的冲击力，能够瞬间改变牌桌的节奏。你是一个充满激情的博弈艺术家，追求的是心跳与胜利共存的瞬间。<br><br>🌟 <b>优势：</b> 极具创造力的线路、让对手无法预测的威慑力。<br>💡 <b>进化建议：</b> 驾驭你的电流，在常规局势中保持平稳电压，将高压留给关键时刻。" },
+        "VEST": { name: "梭鱼", desc: "<b>[高效的狙击手]</b> 你崇尚效率至上。你的每一次出击都经过计算，直指价值核心。在防守端，你展现出极高的纪律性，绝不恋战，懂得及时止损。这种冷静、迅捷且不拖泥带水的风格，让你成为了资金利用率极高的玩家。<br><br>🌟 <b>优势：</b> 极高的执行纪律、优异的盈亏比控制。<br>💡 <b>进化建议：</b> 有时适当的“顽固”，可能会让你在被剥削时不再那么显眼。" },
+        "VESV": { name: "剑鱼", desc: "<b>[热血的决斗者]</b> 你拥有锋利的长颚，那是你进攻的利器。你渴望在牌桌上通过技术击败对手，享受博弈的快感。你的风格华丽且迅速，对于价值有着敏锐的嗅觉。当你状态火热时，你就是海洋中速度最快的骑士。<br><br>🌟 <b>优势：</b> 犀利的单点突破能力、极具爆发力的进攻节奏。<br>💡 <b>进化建议：</b> 学会接受暂时的撤退，保留实力是为了下一次更精彩的冲刺。" },
+        "VEIT": { name: "海豚", desc: "<b>[灵动的领航员]</b> 你天生属于大海。你依靠出色的直觉在波涛中穿梭，既能捕捉到美味的猎物（价值），又能通过声纳（读牌）提前规避危险。你的心态阳光且积极，善于适应各种牌桌环境，是真正的“生存达人”。<br><br>🌟 <b>优势：</b> 极强的环境适应力、快乐且可持续的博弈心态。<br>💡 <b>进化建议：</b> 在面对深海巨兽时，加强一点理论武装会让你游得更远。" },
+        "VEIV": { name: "飞鱼", desc: "<b>[充满想象力的探索者]</b> 你不甘于在水下平庸地游动，总是试图跃出水面寻找新的可能性。你的打法轻灵且不拘一格，充满了对未知的探索欲。你对他人的动态极其敏感，这让你总能发现那些被别人忽视的机会。<br><br>🌟 <b>优势：</b> 不受束缚的思维、对动态局势的敏锐感知。<br>💡 <b>进化建议：</b> 天空虽美但不能长久停留，扎实的基础能让你每次落水都更平稳。" },
+        "MRST": { name: "章鱼", desc: "<b>[深海精算师]</b> 你拥有多核处理的大脑。虽然你不轻易主动出击，但你构建的防御网络密不透风。你善于利用复杂的数学逻辑缠绕住对手，任何试图轻视你的进攻都会陷入泥潭。你是牌桌上最让对手头疼的谜题。<br><br>🌟 <b>优势：</b> 滴水不漏的防御体系、极低的犯错率。<br>💡 <b>进化建议：</b> 你的触手已经控制了局面，试着主动伸出一只去夺取更多价值。" },
+        "MRSV": { name: "墨鱼", desc: "<b>[机敏的防卫者]</b> 你是大自然的伪装大师。你拥有扎实的理论功底，擅长根据环境改变自己的色彩。面对压力时，你展现出惊人的韧性。你丰富的情感让你对危险更加敏感，总是能利用各种工具（策略）来保护自己。<br><br>🌟 <b>优势：</b> 灵活的防御手段、对危险的快速响应。<br>💡 <b>进化建议：</b> 保持清晰的视野，不要让情绪的墨汁遮挡了你自己反击的视线。" },
+        "MRIT": { name: "蝠鲼", desc: "<b>[优雅的智者]</b> 你像巨大的蝠鲼一样，在牌桌上优雅地滑翔。你性格温和，但这不代表软弱。你依靠强大的直觉“吸附”对手的信息，通过不可思议的抓诈唬（Hero Call）来展示你的力量。你从不慌张，总是以静制动。<br><br>🌟 <b>优势：</b> 深邃的洞察力、以柔克刚的太极式打法。<br>💡 <b>进化建议：</b> 你的智慧足以让你在该露出獠牙时，给对手致命一击。" },
+        "MRIV": { name: "河豚", desc: "<b>[敏锐的守护者]</b> 你拥有极强的自我保护意识。平时你温和可爱，但当感受到威胁时，你会竖起所有的刺来捍卫领地。这种“寸土不让”的气势往往能吓退许多投机者。你是一个真性情的玩家，用心在感受每一次博弈。<br><br>🌟 <b>优势：</b> 极强的领地意识、让对手不敢轻举妄动的威慑力。<br>💡 <b>进化建议：</b> 学会分辨真实的威胁和虚假的试探，不是每一次都需要全副武装。" },
+        "MEST": { name: "鹦鹉螺", desc: "<b>[永恒的建筑师]</b> 你是扑克世界中的活化石，见证了无数风格的兴衰。你拥有最完美的螺旋结构（数学模型），只在最安全的时候展示你的力量。你的风格稳健、长久且坚不可摧。在充满波动的海洋里，你是确定性的象征。<br><br>🌟 <b>优势：</b> 极高的生存率、无坚不摧的资金安全防线。<br>💡 <b>进化建议：</b> 偶尔走出你完美的壳，外面的世界或许有你未曾见过的风景（价值）。" },
+        "MESV": { name: "海马", desc: "<b>[理想主义学者]</b> 你对扑克有着美好的理解，试图用书本上的知识来驾驭复杂的海洋。你正直而谨慎，希望每一步都走得正确。你丰富的情感让你在顺风时能体会到巨大的快乐。你是一个在风浪中坚持自我节奏的旅行者。<br><br>🌟 <b>优势：</b> 对规则的尊重、严谨的学习态度。<br>💡 <b>进化建议：</b> 海洋有时不讲道理，学会随波逐流也是一种生存的高级智慧。" },
+        "MEIT": { name: "小丑鱼", desc: "<b>[和谐的外交官]</b> 你是牌桌上最受欢迎的伙伴。你懂得与环境共生，依靠直觉在海葵中寻找庇护。你玩牌的心态轻松写意，懂得规避巨大的风险。对你来说，扑克不是你死我活的战争，而是一场愉快的社交聚会。<br><br>🌟 <b>优势：</b> 极佳的牌桌形象、零压力的博弈体验。<br>💡 <b>进化建议：</b> 既然大家都很喜欢你，不如试着偶尔做一个调皮的恶作剧（诈唬）。" },
+        "MEIV": { name: "翻车鱼", desc: "<b>[自由的随波者]</b> 你拥有令人羡慕的“钝感力”。在大海中，你随道而安，享受阳光和海流的馈赠。你的打法随性而自由，不被复杂的理论所束缚。虽然偶尔会遭遇风浪，但你总能浮出水面，继续享受你的扑克时光。<br><br>🌟 <b>优势：</b> 最纯粹的游戏乐趣、不按常理出牌的意外性。<br>💡 <b>进化建议：</b> 稍微长出一点点游动的肌肉（技术），能让你去到更美丽的海域。" }
+    };
+
+    let userName = "";
+    let userPhone = "";
+    let currentPage = 0;
+    const questionsPerPage = 5;
+    let userAnswers = new Array(questions.length).fill(null);
+
+    const introScreen = document.getElementById('intro');
+    const quizScreen = document.getElementById('quiz');
+    const resultScreen = document.getElementById('result');
+    const startBtn = document.getElementById('start-btn');
+    const questionContainer = document.getElementById('question-container');
+    const progressBar = document.getElementById('progress-bar');
+    const pageIndicator = document.getElementById('page-indicator');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    startBtn.onclick = () => {
+        userName = document.getElementById('username').value.trim();
+        userPhone = document.getElementById('phone').value.trim();
+        
+        if(!userName) { alert("请先输入名字"); return; }
+        if(!userPhone) { alert("请先输入手机号"); return; }
+        
+        const phoneRegex = /^1[3-9]\d{9}$/;
+        if(!phoneRegex.test(userPhone)) {
+            alert("请输入正确的11位手机号格式");
+            return;
+        }
+
+        introScreen.style.display = 'none';
+        quizScreen.style.display = 'block';
+        renderPage();
+    };
+
+    function renderPage() {
+        const startIdx = currentPage * questionsPerPage;
+        const endIdx = Math.min(startIdx + questionsPerPage, questions.length);
+        const currentQuestions = questions.slice(startIdx, endIdx);
+
+        let html = '<div class="question-group">';
+        currentQuestions.forEach((q, index) => {
+            const absoluteIdx = startIdx + index;
+            html += `
+                <div class="question-item">
+                    <div class="question-text">
+                        <span class="q-num">${(absoluteIdx + 1).toString().padStart(2, '0')}</span>
+                        ${q.text}
+                    </div>
+                    <div class="options">
+                        <button class="option-btn ${userAnswers[absoluteIdx] === 'A' ? 'selected' : ''}" 
+                                onclick="selectAnswer(${absoluteIdx}, 'A', event)">
+                            A. ${q.options.A}
+                        </button>
+                        <button class="option-btn ${userAnswers[absoluteIdx] === 'B' ? 'selected' : ''}" 
+                                onclick="selectAnswer(${absoluteIdx}, 'B', event)">
+                            B. ${q.options.B}
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+
+        questionContainer.innerHTML = html;
+        pageIndicator.innerText = `第 ${currentPage + 1} / ${Math.ceil(questions.length / questionsPerPage)} 页`;
+        
+        // 更新进度条
+        const answeredCount = userAnswers.filter(a => a !== null).length;
+        progressBar.style.width = `${(answeredCount / questions.length) * 100}%`;
+
+        // 更新按钮状态
+        prevBtn.disabled = currentPage === 0;
+        if (currentPage === Math.ceil(questions.length / questionsPerPage) - 1) {
+            nextBtn.innerText = "完成测试";
+        } else {
+            nextBtn.innerText = "下一页";
+        }
+    }
+
+    window.selectAnswer = (idx, choice, event) => {
+        userAnswers[idx] = choice;
+        
+        // 获取当前点击按钮所在的选项容器
+        const btn = event.currentTarget;
+        const optionsDiv = btn.parentElement;
+        
+        // 移除该题下所有按钮的选中状态
+        optionsDiv.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        // 给当前点击的按钮添加选中状态
+        btn.classList.add('selected');
+
+        // 更新总进度条
+        const answeredCount = userAnswers.filter(a => a !== null).length;
+        progressBar.style.width = `${(answeredCount / questions.length) * 100}%`;
+    };
+
+    nextBtn.onclick = () => {
+        const startIdx = currentPage * questionsPerPage;
+        const endIdx = Math.min(startIdx + questionsPerPage, questions.length);
+        
+        // 检查当前页是否全部完成
+        for(let i = startIdx; i < endIdx; i++) {
+            if (userAnswers[i] === null) {
+                alert(`请完成本页所有题目 (第 ${i + 1} 题未完成)`);
+                return;
+            }
+        }
+
+        if (currentPage < Math.ceil(questions.length / questionsPerPage) - 1) {
+            currentPage++;
+            renderPage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            displayResult();
+        }
+    };
+
+    prevBtn.onclick = () => {
+        if (currentPage > 0) {
+            currentPage--;
+            renderPage();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
+    function displayResult() {
+        quizScreen.style.display = 'none';
+        resultScreen.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        let scores = { VO: { A: 0, B: 0 }, DR: { A: 0, B: 0 }, CE: { A: 0, B: 0 }, PR: { A: 0, B: 0 } };
+        userAnswers.forEach((choice, idx) => {
+            scores[questions[idx].dim][choice]++;
+        });
+
+        const code = [
+            scores.VO.A >= scores.VO.B ? 'V' : 'M',
+            scores.DR.A >= scores.DR.B ? 'R' : 'E',
+            scores.CE.A >= scores.CE.B ? 'S' : 'I',
+            scores.PR.A >= scores.PR.B ? 'T' : 'V'
+        ].join('');
+
+        const result = profiles[code] || profiles["MEIV"];
+        document.getElementById('result-animal').innerText = result.name;
+        document.getElementById('result-code').innerText = code.split('').join('-');
+        document.getElementById('result-desc').innerHTML = result.desc;
+
+        document.getElementById('submit-btn').onclick = () => {
+            const timeNow = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+            const queryParams = new URLSearchParams({
+                "prefill_名字": userName,
+                "prefill_手机号": userPhone,
+                "prefill_结果": result.name,
+                "prefill_结果代码": code,
+                "prefill_问卷选项": userAnswers.join(''),
+                "prefill_提交时间": timeNow
+            });
+            window.location.href = `${FEISHU_BASE_URL}?${queryParams.toString()}`;
+        };
+    }
+</script>
+
+</body>
+</html>
