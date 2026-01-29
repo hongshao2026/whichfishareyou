@@ -150,7 +150,7 @@
 </div>
 
 <script>
-    const FEISHU_BASE_URL = "https://xcnpow7sc3ja.feishu.cn/share/base/form/shrcnnBC8oSlV7DKo4wl02VTUVd";
+    const FEISHU_BASE_URL = "https://xcnpow7sc3ja.feishu.cn/share/base/form/shrcnlhIgrfmVf1I7EkwlMS2Zwb";
 
     const questions = [
         { text: "河牌圈，你拿着顶对顶踢脚，牌面略微潮湿但没成花。底池已经很大，对手过牌。你会：", options: { A: "下注 1/3 到 1/2 底池。为了拿价值，我不怕被Check-Raise", B: "随后过牌 (Check Back)。摊牌赢下底池很稳，不想遭遇意外" }, dim: "VO" },
@@ -353,15 +353,19 @@
 
         document.getElementById('submit-btn').onclick = () => {
             const timeNow = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
+            
+            // 严格匹配用户提供的飞书表头：名字、手机、结果、结果代码、问卷选项、提交时间
             const queryParams = new URLSearchParams({
-                "prefill_昵称": userName,
-                "prefill_手机号": userPhone,
+                "prefill_名字": userName,
+                "prefill_手机": userPhone,
                 "prefill_结果": result.name,
                 "prefill_结果代码": code,
                 "prefill_问卷选项": userAnswers.join(''),
                 "prefill_提交时间": timeNow
             });
-            window.location.href = `${FEISHU_BASE_URL}?${queryParams.toString()}`;
+
+            const finalUrl = `${FEISHU_BASE_URL}?${queryParams.toString()}`;
+            window.location.href = finalUrl;
         };
     }
 </script>
