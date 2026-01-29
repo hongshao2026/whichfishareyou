@@ -354,7 +354,7 @@
         document.getElementById('submit-btn').onclick = () => {
             const timeNow = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-');
             const queryParams = new URLSearchParams({
-                "prefill_名字": userName,
+                "prefill_昵称": userName,
                 "prefill_手机号": userPhone,
                 "prefill_结果": result.name,
                 "prefill_结果代码": code,
